@@ -30,13 +30,16 @@ t_bunny_response	message(int			fd,
 	fprintf(stderr, "The proxy target sent a message and it was alterated.\n");
       else
 	fprintf(stderr, "The proxy client sent a message and it was alterated.\n");
-      int		damages = rand() % (siz - 1) + 1;
+      int		damages = (siz - 1) / 8 ? (rand() % (siz - 1) / 8 + 1) : 1;
       int		i;
 
       crible->alt_next = false;
       memcpy(buffer, buf, siz);
-      for (i = 0; i < damages; ++i)
-	buffer[rand() % siz] = rand();
+      for (i = 0; i < damages && siz != 0; ++i)
+	if (rand() % 10 == 0)
+	  buffer[rand() % siz] = rand();
+	else
+	  buffer[rand() % siz] ^= 1 << (rand() % 8);
       buf = &buffer[0];
     }
   if (fd == crible->client->fd)
@@ -95,7 +98,7 @@ t_bunny_response	loop(void			*data)
   t_crible		*crible = data;
 
   if (crible->close_freq >= 0)
-    if ((crible->close_delay += bunny_get_current_time()) > crible->close_freq)
+    if ((crible->close_delay += bunny_get_delay()) > crible->close_freq)
       {
 	crible->close_delay = 0;
 	if (crible->single_client)
@@ -104,16 +107,16 @@ t_bunny_response	loop(void			*data)
 	    bunny_server_doom_client(crible->server, crible->single_client);
 	  }
       }
-  if (crible->alt_delay >= 0)
-    if ((crible->alt_delay += bunny_get_current_time()) > crible->alterate_message)
+  if (crible->alterate_message >= 0)
+    if ((crible->alt_delay += bunny_get_delay()) > crible->alterate_message)
       {
 	crible->alt_delay = 0;
 	if (crible->alt_next == false)
 	  fprintf(stderr, "Alterating communication as perturbation loaded.\n");
 	crible->alt_next = true;
       }
-  if (crible->drop_delay >= 0)
-    if ((crible->drop_delay += bunny_get_current_time()) > crible->drop_message)
+  if (crible->drop_message >= 0)
+    if ((crible->drop_delay += bunny_get_delay()) > crible->drop_message)
       {
 	crible->drop_delay = 0;
 	if (crible->drop_next == false)
